@@ -1,0 +1,158 @@
+// Household HQ data model
+// Six connected entities: Project, Task, Expense, Asset, MaintenanceSchedule, ServiceRecord
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum ProjectStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  ON_HOLD
+  COMPLETE
+}
+
+enum TaskStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+}
+
+model Project {
+  id          String        @id @default(cuid())
+  name        String
+  category    String?
+  notes       String?
+  status      ProjectStatus @default(NOT_STARTED)
+  priority    Priority      @default(MEDIUM)
+  budget      Float?
+  dueDate     DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  tasks       Task[]
+  expenses    Expense[]
+  attachments Attachment[]
+}
+
+model Task {
+  id          String     @id @default(cuid())
+  title       String
+  category    String?
+  notes       String?
+  priority    Priority   @default(MEDIUM)
+  status      TaskStatus @default(OPEN)
+  dueDate     DateTime?
+  completedAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  expenses    Expense[]
+  attachments Attachment[]
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  description String
+  amount      Float
+  date        DateTime @default(now())
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  taskId String?
+  task   Task?   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  assetId String?
+  asset   Asset?  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  serviceRecordId String?
+  serviceRecord   ServiceRecord? @relation(fields: [serviceRecordId], references: [id], onDelete: SetNull)
+}
+
+model Asset {
+  id              String    @id @default(cuid())
+  name            String
+  location        String?
+  manufacturer    String?
+  modelNumber     String?
+  serialNumber    String?
+  purchaseDate    DateTime?
+  purchasePrice   Float?
+  warrantyExpires DateTime?
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  maintenanceSchedules MaintenanceSchedule[]
+  serviceRecords       ServiceRecord[]
+  expenses             Expense[]
+  attachments          Attachment[]
+}
+
+model MaintenanceSchedule {
+  id              String    @id @default(cuid())
+  serviceType     String
+  intervalDays    Int?
+  lastServiceDate DateTime?
+  nextDueDate     DateTime?
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  serviceRecords ServiceRecord[]
+}
+
+model ServiceRecord {
+  id          String   @id @default(cuid())
+  serviceDate DateTime @default(now())
+  cost        Float?
+  notes       String?
+  partReplaced String?
+  createdAt   DateTime @default(now())
+
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  maintenanceScheduleId String?
+  maintenanceSchedule   MaintenanceSchedule? @relation(fields: [maintenanceScheduleId], references: [id], onDelete: SetNull)
+
+  expenses Expense[]
+}
+
+// Links to files stored in Google Drive (photos, manuals, warranties, receipts).
+// The database stores only metadata + a link, per the "keep files in Drive" design.
+model Attachment {
+  id        String   @id @default(cuid())
+  label     String
+  url       String
+  createdAt DateTime @default(now())
+
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  taskId String?
+  task   Task?   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  assetId String?
+  asset   Asset?  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+}
