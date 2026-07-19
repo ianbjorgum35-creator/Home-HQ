@@ -59,6 +59,25 @@ No `.env` is required for local use — `prisma.config.ts` and `src/lib/db.ts` d
 - **`/maintenance`** — every maintenance schedule across all assets, split into overdue vs. upcoming.
 - **`/expenses`** — the full expense ledger, optionally linked to a project or asset.
 
+## Deploying to Railway
+
+This app keeps SQLite in production, so it needs a host with a persistent disk — Railway's volumes cover that
+with no code changes beyond what's already in this repo (`npm start` runs `prisma migrate deploy` before
+`next start`, and reads its port from `$PORT`).
+
+1. Push this repo to GitHub (already done if you're reading this from the repo).
+2. At [railway.app](https://railway.app), sign in with GitHub → **New Project** → **Deploy from GitHub repo**
+   → pick this repo and the branch you want live.
+3. Open the new service → **Settings → Volumes** → add a volume mounted at `/data`.
+4. Open **Variables** and add `DATABASE_URL` = `file:/data/production.db`.
+5. Deploy. Railway auto-detects Node.js, runs `npm install` (which runs `prisma generate` via `postinstall`)
+   and `npm run build`, then starts the app with `npm start` — which applies migrations against the volume
+   and boots `next start` on Railway's assigned port.
+6. Optional: load sample data once via the Railway CLI: `railway run npm run seed`.
+
+Railway gives you a `*.up.railway.app` URL immediately; add a custom domain later from the service's
+**Settings → Networking** tab if you want one.
+
 ## What's next (per the original design doc's phasing)
 
 This build covers **Phase 1 (the bones)**. Later phases from the design doc — not built here — would add:
